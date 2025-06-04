@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useContext } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import PreferencesForm from '../components/PreferencesForm';
 import axios from 'axios';
 import DarkModeToggle from '../components/DarkModeToggle';
+import { AuthContext } from "../context/AuthContext";
+import LogoutButton from '../components/LogoutButton';
+import SavedRecipesButton from '../components/SavedRecipesButton';
 
 const RecipePage = () => {
   const location = useLocation();
   const detectedVeggies = location.state?.detectedVeggies || [];
+  const { user } = useContext(AuthContext);
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
 
   const [preferences, setPreferences] = useState({
     servingSize: 2,
@@ -49,12 +56,18 @@ const RecipePage = () => {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-end mb-4">
-        <DarkModeToggle />
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex justify-between items-center mb-4 w-full max-w-md">
+        <h1 className="text-2xl font-bold">
+          {greeting}, {user.name}! 🌱
+        </h1>
+        <div className="flex items-center gap-2">
+          <DarkModeToggle />
+          <SavedRecipesButton />
+          <LogoutButton />
+        </div>
       </div>
-      <h1 className="text-2xl font-bold mb-2">🍳 Recipe Generator</h1>
-
+      <h2 className="text-xl font-semibold mb-4">Recipe Page</h2>
       <PreferencesForm
         preferences={preferences}
         setPreferences={setPreferences}

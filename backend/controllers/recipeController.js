@@ -23,7 +23,7 @@ Preferences:
 - Spicy Level: ${['Little', 'Medium', 'High'][preferences.spicyLevel - 1]}
 
 Return a clear, step-by-step recipe and divide recipe in  English Translation  as **English Translation** and Hindi translation  as **Hindi Translation**seperately.
-Include a section for ingredients, steps, and approximate nutritional value per serving.
+Include a section for ingredients, steps, and approximate nutritional value per serving  and also provide a youtube video for the recipe.
 `;
 
   try {

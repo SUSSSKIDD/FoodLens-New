@@ -1,8 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
+import { AuthContext } from "../context/AuthContext";
 import DarkModeToggle from '../components/DarkModeToggle';
+import LogoutButton from '../components/LogoutButton';
+import HomeButton from '../components/HomeButton';
 
 const SavedRecipesPage = () => {
+  const { user } = useContext(AuthContext);
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
+
   const [recipes, setRecipes] = useState([]);
   const [language, setLanguage] = useState({});
 
@@ -96,19 +104,25 @@ const SavedRecipesPage = () => {
   
     return nutritionLines;
   };
-  
 
   return (
     <div className="p-4">
-      <div className="flex justify-end mb-4">
-        <DarkModeToggle />
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">
+          {greeting}, {user?.name || 'User'}! 🌱
+        </h1>
+        <div className="flex items-center gap-2">
+          <DarkModeToggle />
+          <HomeButton />
+          <LogoutButton />
+        </div>
       </div>
-      <h1 className="text-2xl font-bold mb-6 text-center">📘 Saved Recipes</h1>
+      <h2 className="text-xl font-semibold mb-4">Saved Recipes Page</h2>
 
       {recipes.length === 0 ? (
         <p className="text-center">No saved recipes yet.</p>
       ) : (
-        <div className="max-w-3xl mx-auto px-4">
+        <div className="max-w-3xl mx-auto">
           <ul className="space-y-8">
             {recipes.map((r) => (
               <li

@@ -1,11 +1,19 @@
 // src/pages/CameraPage.jsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import ImageUploader from '../components/ImageUploader';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import DarkModeToggle from '../components/DarkModeToggle';
+import { AuthContext } from "../context/AuthContext";
+import LogoutButton from '../components/LogoutButton';
+import SavedRecipesButton from '../components/SavedRecipesButton';
 
 const CameraPage = () => {
+  const { user } = useContext(AuthContext);
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
+
   const [image, setImage] = useState(null);
   const [detections, setDetections] = useState([]);
   const imageRef = useRef();
@@ -45,11 +53,18 @@ const CameraPage = () => {
   };
 
   return (
-    <div className="p-4">
-      <div className="flex justify-end mb-4">
-        <DarkModeToggle />
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex justify-between items-center mb-4 w-full max-w-md">
+        <h1 className="text-2xl font-bold">
+          {greeting}, {user.name}! 🌱
+        </h1>
+        <div className="flex items-center gap-2">
+          <DarkModeToggle />
+          <SavedRecipesButton />
+          <LogoutButton />
+        </div>
       </div>
-      <h2 className="text-xl font-bold mb-4">🥕 Detect Vegetables</h2>    
+      <h2 className="text-xl font-semibold mb-4">🥕 Detect Vegetables</h2>    
       <ImageUploader onImageSelected={handleImageChange} />
 
       {image && (
