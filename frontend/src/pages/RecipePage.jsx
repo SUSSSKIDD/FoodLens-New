@@ -9,6 +9,7 @@ import SavedRecipesButton from '../components/SavedRecipesButton';
 
 const RecipePage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const detectedVeggies = location.state?.detectedVeggies || [];
   const { user } = useContext(AuthContext);
   const hour = new Date().getHours();
@@ -29,7 +30,9 @@ const RecipePage = () => {
   });
 
   const [recipe, setRecipe] = useState(null);
+  const [recipeId, setRecipeId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showLanguageSelect, setShowLanguageSelect] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,6 +50,34 @@ const RecipePage = () => {
     setLoading(false);
   };
 
+  const handleSaveRecipe = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const title = recipe.split('\n')[0]; // use first line as title
+      const res = await axios.post(
+        'http://localhost:5000/api/recipe/save',
+        { title, content: recipe },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setRecipeId(res.data.recipe._id);
+      alert('✅ Recipe saved successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Please Login to save recipe');
+    }
+  };
+
+  const handleStartCooking = (language) => {
+    const title = recipe.split('\n')[0];
+    const content = recipe.split('\n').slice(1).join('\n');
+    navigate('/cook', { 
+      state: { 
+        recipe: { title, content },
+        lang: language
+      }
+    });
+  };
+
   if (detectedVeggies.length === 0) {
     return (
       <div className="p-4 text-red-600 font-semibold">
@@ -59,7 +90,7 @@ const RecipePage = () => {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="flex justify-between items-center mb-4 w-full max-w-md">
         <h1 className="text-2xl font-bold">
-          {greeting}, {user.name}! 🌱
+          {greeting}, {user?.name}! 🌱
         </h1>
         <div className="flex items-center gap-2">
           <DarkModeToggle />
@@ -77,31 +108,48 @@ const RecipePage = () => {
       {loading && <p className="mt-4">🔄 Generating recipe...</p>}
 
       {recipe && (
-        <div className="mt-6 bg-gray-100 p-4 rounded">
-          <h2 className="text-xl font-bold mb-2">👨‍🍳 Generated Recipe</h2>
-          <pre className="whitespace-pre-wrap">{recipe}</pre>
+        <>
+          <div className="mt-6 bg-gray-100 p-4 rounded">
+            <h2 className="text-xl font-bold mb-2">👨‍🍳 Generated Recipe</h2>
+            <pre className="whitespace-pre-wrap">{recipe}</pre>
 
-          <button
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4"
-            onClick={async () => {
-              try {
-                const token = localStorage.getItem('token');
-                const title = recipe.split('\n')[0]; // use first line as title
-                await axios.post(
-                  'http://localhost:5000/api/recipe/save',
-                  { title, content: recipe },
-                  { headers: { Authorization: `Bearer ${token}` } }
-                );
-                alert('✅ Recipe saved successfully!');
-              } catch (err) {
-                console.error(err);
-                alert('Please Login to save recipe');
-              }
-            }}
-          >
-            💾 Save Recipe
-          </button>
-        </div>
+            <div className="flex flex-col gap-2 mt-4">
+              <button
+                onClick={handleSaveRecipe}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                💾 Save Recipe
+              </button>
+
+              <button
+                onClick={() => setShowLanguageSelect(true)}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              >
+                🍳 Let's get our meal ready
+              </button>
+            </div>
+
+            {showLanguageSelect && (
+              <div className="mt-4 p-4 bg-white rounded shadow">
+                <h3 className="text-lg font-semibold mb-3">Select Language</h3>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => handleStartCooking('en')}
+                    className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                  >
+                    English 🇬🇧
+                  </button>
+                  <button
+                    onClick={() => handleStartCooking('hi')}
+                    className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                  >
+                    Hindi 🇮🇳
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

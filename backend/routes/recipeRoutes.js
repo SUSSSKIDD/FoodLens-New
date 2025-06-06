@@ -6,7 +6,9 @@ const {
     saveRecipe,
     getUserRecipes,
     deleteRecipe,
-    updateRecipe
+    updateRecipe,
+    saveCookedRecipe,
+    getCookedRecipes
   } = require('../controllers/recipeController');
   
 router.post('/generate', generateRecipe);  
@@ -14,5 +16,6 @@ router.post('/save', authenticate, saveRecipe);
 router.get('/user', authenticate, getUserRecipes);
 router.patch('/:id', authenticate, updateRecipe); 
 router.delete('/:id', authenticate, deleteRecipe);
-
+router.post('/cooked', authenticate, saveCookedRecipe);
+router.get('/cooked', authenticate, getCookedRecipes);
 module.exports = router;

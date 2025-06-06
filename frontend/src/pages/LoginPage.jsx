@@ -6,6 +6,7 @@ import { auth, provider } from '../firebase';
 import { signInWithPopup } from 'firebase/auth';
 import DarkModeToggle from '../components/DarkModeToggle';
 import LogoutButton from '../components/LogoutButton';
+import HomeButton from '../components/HomeButton';
 
 const LoginPage = () => {
   const { login, user } = useContext(AuthContext);
@@ -65,6 +66,7 @@ const LoginPage = () => {
         )}
         <div className="flex items-center gap-2">
           <DarkModeToggle />
+          {user && <HomeButton />}
           {user && <LogoutButton />}
         </div>
       </div>

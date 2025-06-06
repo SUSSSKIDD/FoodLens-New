@@ -4,15 +4,18 @@ import { AuthContext } from "../context/AuthContext";
 import DarkModeToggle from '../components/DarkModeToggle';
 import LogoutButton from '../components/LogoutButton';
 import HomeButton from '../components/HomeButton';
+import { useNavigate } from 'react-router-dom';
 
 const SavedRecipesPage = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
 
   const [recipes, setRecipes] = useState([]);
   const [language, setLanguage] = useState({});
+  const [showLanguageSelect, setShowLanguageSelect] = useState({});
 
   useEffect(() => {
     const fetchRecipes = async () => {
@@ -105,6 +108,15 @@ const SavedRecipesPage = () => {
     return nutritionLines;
   };
 
+  const handleStartCooking = (recipe, selectedLang) => {
+    navigate('/cook', { 
+      state: { 
+        recipe: { title: recipe.title, content: recipe.content },
+        lang: selectedLang
+      }
+    });
+  };
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
@@ -178,6 +190,35 @@ const SavedRecipesPage = () => {
                     handleChange(r._id, 'content', e.target.value)
                   }
                 />
+
+                {/* Start Cooking Button */}
+                <button
+                  onClick={() => setShowLanguageSelect({ ...showLanguageSelect, [r._id]: true })}
+                  className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full"
+                >
+                  🍳 Let's get our meal ready
+                </button>
+
+                {/* Language Selection Modal */}
+                {showLanguageSelect[r._id] && (
+                  <div className="mt-4 p-4 bg-white rounded shadow border">
+                    <h3 className="text-lg font-semibold mb-3">Select Language</h3>
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => handleStartCooking(r, 'en')}
+                        className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                      >
+                        English 🇬🇧
+                      </button>
+                      <button
+                        onClick={() => handleStartCooking(r, 'hi')}
+                        className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                      >
+                        Hindi 🇮🇳
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Nutrition Block */}
                 <div className="mt-3">

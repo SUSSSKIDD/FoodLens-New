@@ -1,11 +1,12 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config();
-
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const Recipe = require('../models/Recipe');
+const CookedRecipe = require('../models/CookedRecipe');
 
-exports.generateRecipe = async (req, res) => {
+// ✅ 1. Generate Recipe with Gemini
+const generateRecipe = async (req, res) => {
   const { ingredients, preferences } = req.body;
 
   const prompt = `
@@ -22,8 +23,21 @@ Preferences:
 - Health Goal: ${preferences.healthGoal}
 - Spicy Level: ${['Little', 'Medium', 'High'][preferences.spicyLevel - 1]}
 
-Return a clear, step-by-step recipe and divide recipe in  English Translation  as **English Translation** and Hindi translation  as **Hindi Translation**seperately.
-Include a section for ingredients, steps, and approximate nutritional value per serving .
+First provide the recipe in English with the following sections:
+**English Translation**
+**Ingredients:**
+(List ingredients with bullet points)
+**Instructions:**
+(Numbered steps)
+
+Then provide the Hindi translation with the following sections:
+**Hindi Translation**
+**सामग्री:**
+(List ingredients in Hindi with bullet points)
+**निर्देश:**
+(Numbered steps in Hindi)
+
+Finally, include approximate nutritional value per serving.
 `;
 
   try {
@@ -38,8 +52,8 @@ Include a section for ingredients, steps, and approximate nutritional value per 
   }
 };
 
-// Save Gemini recipe to DB
-exports.saveRecipe = async (req, res) => {
+// ✅ 2. Save Gemini Recipe to DB
+const saveRecipe = async (req, res) => {
   const { title, content } = req.body;
   const userId = req.user.id;
 
@@ -53,8 +67,8 @@ exports.saveRecipe = async (req, res) => {
   }
 };
 
-// Get recipes saved by the current user
-exports.getUserRecipes = async (req, res) => {
+// ✅ 3. Get Saved Recipes for a User
+const getUserRecipes = async (req, res) => {
   const userId = req.user.id;
 
   try {
@@ -65,7 +79,8 @@ exports.getUserRecipes = async (req, res) => {
   }
 };
 
-exports.updateRecipe = async (req, res) => {
+// ✅ 4. Update a Recipe
+const updateRecipe = async (req, res) => {
   const { id } = req.params;
   const { title, content } = req.body;
   const userId = req.user.id;
@@ -85,9 +100,8 @@ exports.updateRecipe = async (req, res) => {
   }
 };
 
-
-// Delete a recipe by ID
-exports.deleteRecipe = async (req, res) => {
+// ✅ 5. Delete a Recipe
+const deleteRecipe = async (req, res) => {
   const recipeId = req.params.id;
   const userId = req.user.id;
 
@@ -99,4 +113,45 @@ exports.deleteRecipe = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: 'Failed to delete recipe' });
   }
+};
+
+// ✅ 6. Save Cooked Recipe to CookedHistory
+const saveCookedRecipe = async (req, res) => {
+  const { title, content, language } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const cooked = await CookedRecipe.create({
+      title,
+      content,
+      language,
+      userId
+    });
+
+    res.status(201).json({ message: '✅ Recipe saved to cook history', cooked });
+  } catch (err) {
+    console.error('❌ Error saving cooked recipe:', err);
+    res.status(500).json({ message: 'Failed to save cooked recipe' });
+  }
+};
+
+const getCookedRecipes = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const history = await CookedRecipe.find({ userId }).sort({ cookedAt: -1 });
+    res.json({ history });
+  } catch (err) {
+    console.error('❌ Error fetching cooked recipes:', err);
+    res.status(500).json({ message: 'Failed to fetch cook history' });
+  }
+};
+
+module.exports = {
+  generateRecipe,
+  saveRecipe,
+  getUserRecipes,
+  updateRecipe,
+  deleteRecipe,
+  saveCookedRecipe,
+  getCookedRecipes
 };

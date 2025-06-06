@@ -5,6 +5,8 @@ import HomePage from './pages/HomePage';
 import CameraPage from './pages/CameraPage';
 import RecipePage from './pages/RecipePage';
 import SavedRecipesPage from './pages/SavedRecipesPage';
+import CookingPage from './pages/CookingPage';
+import CookHistoryPage from './pages/CookHistoryPage';
 
 function App() {
   return (
@@ -18,6 +20,9 @@ function App() {
               <Route path="/camera" element={<CameraPage />} />
               <Route path="/recipe" element={<RecipePage />} />
               <Route path="/saved" element={<SavedRecipesPage />} />
+              <Route path="/cook" element={<CookingPage />} />
+              <Route path="/cook/:id" element={<CookingPage />} />
+              <Route path="/history" element={<CookHistoryPage />} />
             </Routes>
           </div>
         </div>
