@@ -8,6 +8,7 @@ const authRoutes = require('./routes/authRoutes');
 const app = express();
 const recipeRoutes = require('./routes/recipeRoutes');
 const path = require('path');
+const geminiRoutes = require('./routes/geminiRoutes');
 
 // Configure CORS
 app.use(cors({
@@ -23,6 +24,7 @@ app.use(passport.initialize());
 app.use('/api/recipe', recipeRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/detect', detectRoutes);
+app.use('/api/gemini', geminiRoutes);
 
 // Serve static files
 const publicPath = path.join(__dirname, 'public');

@@ -144,11 +144,15 @@ const CookHistoryPage = () => {
 
   // Handler for yellow Continue Cooking button
   const handlePromptLanguage = (recipe, continueInfo) => {
+    // If continueInfo exists, use its step and lang, otherwise start from step 0 and use global lang
+    const stepToResume = continueInfo?.currentStep || 0;
+    const langToUse = continueInfo?.lang || getLangPref() || 'en';
+
     setLangModal({
       show: true,
       recipe,
-      step: continueInfo.currentStep || 0,
-      defaultLang: continueInfo.lang || getLangPref() || 'en'
+      step: stepToResume,
+      defaultLang: langToUse
     });
   };
 
@@ -159,6 +163,21 @@ const CookHistoryPage = () => {
     setLangModal({ show: false, recipe: null, step: 0, defaultLang: 'en' });
   };
 
+  // Save to Saved Recipes handler
+  const handleSaveToSavedRecipes = async (recipe) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        'http://localhost:5000/api/recipe/save',
+        { title: recipe.title, content: recipe.content },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert('✅ Recipe saved to your saved recipes!');
+    } catch (err) {
+      alert('❌ Failed to save recipe. Please login.');
+    }
+  };
+
   return (
     <div className="p-4 max-w-3xl mx-auto">
       {history.length === 0 ? (
@@ -166,7 +185,8 @@ const CookHistoryPage = () => {
       ) : (
         <ul className="space-y-8">
           {history.map((r) => {
-            const lang = language[r._id] || getLangPref() || r.language || 'en';
+            // Determine language for this recipe card
+            const lang = language[r._id] || r.language || 'en';
             const instructions = getInstructions(r.content, lang);
             const completed = isCompleted(r._id, instructions);
             const continueInfo = getContinueLaterInfo(r);
@@ -189,8 +209,8 @@ const CookHistoryPage = () => {
                     >
                       {lang === 'hi' ? '🔁 Show English' : '🔁 Show Hindi'}
                     </button>
-                    {/* Continue Later Info and Button (now beside language toggle) */}
-                    {continueInfo && (
+                    {/* Continue Cooking button */}
+                    {!completed && (
                       <button
                         onClick={() => handlePromptLanguage(r, continueInfo)}
                         className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 text-sm"
@@ -200,6 +220,11 @@ const CookHistoryPage = () => {
                     )}
                   </div>
                 </div>
+                {/* Recipe Name Display */}
+                <div className="font-bold mb-1">
+                  {lang === 'hi' ? 'नाम: ' : 'Name: '}
+                  {r.title}
+                </div>
                 {/* Recipe Text Area */}
                 <textarea
                   className="w-full border rounded p-3 text-sm resize-none overflow-y-auto h-52 sm:h-64 md:h-80 lg:h-96"
@@ -207,6 +232,15 @@ const CookHistoryPage = () => {
                   value={getLanguageContent(r, lang)}
                   readOnly
                 />
+                {/* Save this Recipe Button (after completion) */}
+                {isCompleted(r._id, getInstructions(r.content, lang)) && (
+                  <button
+                    onClick={() => handleSaveToSavedRecipes(r)}
+                    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full"
+                  >
+                    💾 Save this Recipe
+                  </button>
+                )}
               </li>
             );
           })}

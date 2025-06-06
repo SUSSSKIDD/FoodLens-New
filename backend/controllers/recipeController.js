@@ -25,6 +25,7 @@ Preferences:
 
 First provide the recipe in English with the following sections:
 **English Translation**
+ name of recipe compulsarily in english as **Name:**
 **Ingredients:**
 (List ingredients with bullet points)
 **Instructions:**
@@ -32,6 +33,7 @@ First provide the recipe in English with the following sections:
 
 Then provide the Hindi translation with the following sections:
 **Hindi Translation**
+name of recipe compulsarily in hindi as **नाम:**
 **सामग्री:**
 (List ingredients in Hindi with bullet points)
 **निर्देश:**
@@ -43,8 +45,7 @@ Finally, include approximate nutritional value per serving.
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = await response.text();
+    const response = await result.response;    const text = await response.text();
     res.json({ recipe: text });
   } catch (err) {
     console.error('Gemini error:', err.message);

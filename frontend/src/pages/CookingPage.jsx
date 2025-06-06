@@ -24,6 +24,12 @@ const CookingPage = () => {
   const [lang, setLang] = useState('en');
   const [ingredients, setIngredients] = useState([]);
   const [instructions, setInstructions] = useState([]);
+  // Chat state
+  const [chatHistory, setChatHistory] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  // Track handled suggestions by index
+  const [handledSuggestions, setHandledSuggestions] = useState({});
 
   // Load saved progress on mount
   useEffect(() => {
@@ -48,14 +54,31 @@ const CookingPage = () => {
 
   // Save progress whenever it changes
   useEffect(() => {
-    if (recipe) {
-      localStorage.setItem('cookingProgress', JSON.stringify({
+    if (recipe && instructions.length > 0) {
+      const recipeKey = recipe.title.replace(/\s+/g, '_');
+      const progressData = {
         recipe,
         currentStep,
-        lang
-      }));
+        lang,
+        // Also store last left at time here for general progress
+        lastLeftAt: new Date().toISOString()
+      };
+      // Save general cooking progress
+      localStorage.setItem('cookingProgress', JSON.stringify(progressData));
+
+      // If the user has completed the recipe, mark it as completed in specific recipe progress
+      if (currentStep === instructions.length - 1) {
+        localStorage.setItem(`cookingProgress_${recipeKey}`, JSON.stringify({
+          ...progressData,
+          completed: true // Optional flag, but step reaching last is main indicator
+        }));
+      } else {
+         // If not completed, update the specific recipe progress with the current step
+         localStorage.setItem(`cookingProgress_${recipeKey}`, JSON.stringify(progressData));
+      }
+
     }
-  }, [recipe, currentStep, lang]);
+  }, [recipe, currentStep, lang, instructions]);
 
   // Parse recipe content when recipe changes
   useEffect(() => {
@@ -166,6 +189,102 @@ const CookingPage = () => {
     const newLang = lang === 'hi' ? 'en' : 'hi';
     setLang(newLang);
     localStorage.setItem('cookingLang', newLang);
+  };
+
+  // Handle sending a chat message (now with Gemini API integration)
+  const handleSendChat = async () => {
+    if (!chatInput.trim()) return;
+    const userMsg = chatInput;
+    setChatHistory((prev) => [
+      ...prev,
+      { sender: "user", text: userMsg }
+    ]);
+    setChatInput("");
+    try {
+      const res = await axios.post('http://localhost:5000/api/gemini/chat', {
+        recipe,
+        step: currentStep,
+        message: userMsg
+      });
+      // Clean Gemini's reply for JSON
+      let suggestion = null;
+      let explanation = res.data.reply;
+      let cleaned = explanation.trim();
+      if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json/, '');
+      if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```/, '');
+      if (cleaned.endsWith('```')) cleaned = cleaned.replace(/```$/, '');
+      cleaned = cleaned.trim();
+      try {
+        const parsed = JSON.parse(cleaned);
+        if (parsed.action && parsed.details) {
+          suggestion = parsed;
+          explanation = parsed.explanation || "";
+        }
+      } catch {
+        // Not a suggestion, just a normal reply
+      }
+      setChatHistory((prev) => [
+        ...prev,
+        { sender: "gemini", text: explanation, suggestion }
+      ]);
+    } catch (err) {
+      setChatHistory((prev) => [
+        ...prev,
+        { sender: "gemini", text: "Sorry, I couldn't get a response from Gemini." }
+      ]);
+    }
+  };
+
+  // Accept/Reject handlers for Gemini suggestions
+  const handleAcceptSuggestion = (msg, idx) => {
+    if (!msg.suggestion || handledSuggestions[idx]) return;
+    const { action, details } = msg.suggestion;
+    let newIngredients = [...ingredients];
+    let newInstructions = [...instructions];
+
+    switch (action) {
+      case "add_ingredient":
+        newIngredients.push(details.ingredient);
+        break;
+      case "remove_ingredient":
+        newIngredients = newIngredients.filter(i => i.toLowerCase() !== details.ingredient.toLowerCase());
+        break;
+      case "substitute_ingredient":
+        newIngredients = newIngredients.map(i =>
+          i.toLowerCase().includes(details.from.toLowerCase())
+            ? i.replace(new RegExp(details.from, 'gi'), details.to)
+            : i
+        );
+        break;
+      case "add_step":
+        newInstructions.splice(details.position ?? newInstructions.length, 0, details.step);
+        break;
+      case "remove_step":
+        newInstructions = newInstructions.filter((_, idx) => idx !== (details.step_number - 1));
+        break;
+      case "skip_step":
+        setCurrentStep((prev) => Math.min(prev + 1, newInstructions.length - 1));
+        break;
+      case "edit_step":
+        newInstructions[details.step_number - 1] = details.new_text;
+        break;
+      default:
+        break;
+    }
+
+    setIngredients(newIngredients);
+    setInstructions(newInstructions);
+    setRecipe({ ...recipe, ingredients: newIngredients, instructions: newInstructions });
+    localStorage.setItem('cookingProgress', JSON.stringify({
+      recipe: { ...recipe, ingredients: newIngredients, instructions: newInstructions },
+      currentStep,
+      lang
+    }));
+    setHandledSuggestions(prev => ({ ...prev, [idx]: true }));
+  };
+
+  const handleRejectSuggestion = (msg, idx) => {
+    setHandledSuggestions(prev => ({ ...prev, [idx]: true }));
   };
 
   if (!recipe || !instructions.length) {
@@ -282,6 +401,63 @@ const CookingPage = () => {
           </div>
         )}
       </div>
+      {/* Chatbot Floating Button */}
+      <button
+        className="fixed bottom-8 right-8 z-50 bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-blue-700"
+        onClick={() => setIsChatOpen((open) => !open)}
+        title="Ask Gemini Assistant"
+      >
+        💬
+      </button>
+      {/* Chat Window */}
+      {isChatOpen && (
+        <div className="fixed bottom-24 right-8 z-50 w-80 max-w-full bg-white rounded-lg shadow-lg flex flex-col border border-gray-200">
+          <div className="p-3 border-b font-bold bg-blue-100 rounded-t-lg">Gemini Cooking Assistant</div>
+          <div className="flex-1 p-3 overflow-y-auto max-h-72 space-y-2">
+            {chatHistory.length === 0 && (
+              <div className="text-gray-400 text-sm">Ask for help, substitutions, or tips at any step!</div>
+            )}
+            {chatHistory.map((msg, idx) => (
+              <div key={idx} className={msg.sender === 'user' ? 'text-right' : 'text-left'}>
+                <span className={msg.sender === 'user' ? 'inline-block bg-blue-500 text-white px-3 py-1 rounded-lg mb-1' : 'inline-block bg-gray-200 text-gray-800 px-3 py-1 rounded-lg mb-1'}>
+                  {msg.text}
+                </span>
+                {msg.suggestion && !handledSuggestions[idx] && (
+                  <div className="flex gap-2 mt-1 justify-end">
+                    <button
+                      onClick={() => handleAcceptSuggestion(msg, idx)}
+                      className="bg-green-500 text-white px-2 py-1 rounded text-xs"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleRejectSuggestion(msg, idx)}
+                      className="bg-red-500 text-white px-2 py-1 rounded text-xs"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex border-t p-2 gap-2 bg-gray-50 rounded-b-lg">
+            <input
+              className="flex-1 border rounded px-2 py-1 text-sm"
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSendChat(); }}
+              placeholder="Ask Gemini..."
+            />
+            <button
+              className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm"
+              onClick={handleSendChat}
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
