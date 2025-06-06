@@ -1,0 +1,6 @@
+git init
+git remote set-url origin https://github.com/SUSSSKIDD/FoodLens-New.git
+git branch
+git add .
+git commit -m "Your message describing the new changes"
+git push origin main
