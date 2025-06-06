@@ -8,7 +8,8 @@ const {
     deleteRecipe,
     updateRecipe,
     saveCookedRecipe,
-    getCookedRecipes
+    getCookedRecipes,
+    updateCookedAt
   } = require('../controllers/recipeController');
   
 router.post('/generate', generateRecipe);  
@@ -18,4 +19,5 @@ router.patch('/:id', authenticate, updateRecipe);
 router.delete('/:id', authenticate, deleteRecipe);
 router.post('/cooked', authenticate, saveCookedRecipe);
 router.get('/cooked', authenticate, getCookedRecipes);
+router.patch('/cooked/:id', authenticate, updateCookedAt);
 module.exports = router;

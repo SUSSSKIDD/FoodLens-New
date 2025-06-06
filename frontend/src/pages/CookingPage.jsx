@@ -6,6 +6,7 @@ import { AuthContext } from "../context/AuthContext";
 import LogoutButton from '../components/LogoutButton';
 import SavedRecipesButton from '../components/SavedRecipesButton';
 import HomeButton from '../components/HomeButton';
+import CookHistoryButton from '../components/CookHistoryButton';
 
 const CookingPage = () => {
   const location = useLocation();
@@ -24,16 +25,42 @@ const CookingPage = () => {
   const [ingredients, setIngredients] = useState([]);
   const [instructions, setInstructions] = useState([]);
 
+  // Load saved progress on mount
   useEffect(() => {
-    const recipeData = location.state?.recipe;
-    const language = location.state?.lang || 'en';
-    
-    if (recipeData) {
-      setRecipe(recipeData);
-      setLang(language);
+    const savedProgress = localStorage.getItem('cookingProgress');
+    if (savedProgress) {
+      const { recipe: savedRecipe, currentStep: savedStep, lang: savedLang } = JSON.parse(savedProgress);
+      setRecipe(savedRecipe);
+      setCurrentStep(savedStep);
+      setLang(savedLang);
+    } else {
+      const recipeData = location.state?.recipe;
+      const language = location.state?.lang || 'en';
       
-      // Parse recipe content
-      const content = recipeData.content;
+      if (recipeData) {
+        setRecipe(recipeData);
+        setLang(language);
+      } else {
+        navigate('/camera');
+      }
+    }
+  }, [location.state, navigate]);
+
+  // Save progress whenever it changes
+  useEffect(() => {
+    if (recipe) {
+      localStorage.setItem('cookingProgress', JSON.stringify({
+        recipe,
+        currentStep,
+        lang
+      }));
+    }
+  }, [recipe, currentStep, lang]);
+
+  // Parse recipe content when recipe changes
+  useEffect(() => {
+    if (recipe) {
+      const content = recipe.content;
       
       // Split content into English and Hindi sections
       const sections = content.split(/\*\*Hindi Translation\*\*/i);
@@ -41,7 +68,7 @@ const CookingPage = () => {
       const hindiContent = sections[1] || '';
       
       // Extract ingredients and instructions based on language
-      const contentToUse = language === 'hi' ? hindiContent : englishContent;
+      const contentToUse = lang === 'hi' ? hindiContent : englishContent;
       
       // Extract ingredients
       const ingredientsMatch = contentToUse.match(/\*\*(?:Ingredients|सामग्री):\*\*\s*\n\*([\s\S]*?)(?=\*\*(?:Instructions|निर्देश):\*\*|\*\*Approximate|$)/i);
@@ -62,10 +89,8 @@ const CookingPage = () => {
           .map(line => line.trim().replace(/^\d+\.\s*/, '').trim());
         setInstructions(instructionsList);
       }
-    } else {
-      navigate('/camera');
     }
-  }, [location.state, navigate]);
+  }, [recipe, lang]);
 
   const startTimer = (minutes) => {
     if (timer) {
@@ -113,47 +138,70 @@ const CookingPage = () => {
   };
 
   const extractTimeFromStep = (step) => {
+    if (!step) return null;
     const timeMatch = step.match(/(\d+)\s*(?:minutes|mins|min|मिनट)/i);
     return timeMatch ? parseInt(timeMatch[1]) : null;
   };
 
-  const handleSaveRecipe = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(
-        'http://localhost:5000/api/recipe/save',
-        { title: recipe.title, content: recipe.content },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert('✅ Recipe saved successfully!');
-    } catch (err) {
-      console.error(err);
-      alert('Please Login to save recipe');
-    }
+  // Add Continue Later handler
+  const handleContinueLater = () => {
+    if (!recipe) return;
+    // Use a unique key for this recipe (by title+content hash or just title if unique)
+    const recipeKey = recipe.title.replace(/\s+/g, '_');
+    localStorage.setItem(
+      `cookingProgress_${recipeKey}`,
+      JSON.stringify({
+        recipe,
+        currentStep,
+        lang,
+        lastLeftAt: new Date().toISOString()
+      })
+    );
+    alert('Your progress has been saved! You can continue later from the Cook History page.');
+    navigate('/history');
   };
 
-  if (!recipe) {
-    return <div>Loading...</div>;
+  // Language toggle handler
+  const handleToggleLanguage = () => {
+    const newLang = lang === 'hi' ? 'en' : 'hi';
+    setLang(newLang);
+    localStorage.setItem('cookingLang', newLang);
+  };
+
+  if (!recipe || !instructions.length) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md text-center">
+          <p className="text-lg">Loading recipe...</p>
+          <p className="text-sm text-gray-500 mt-2">Please wait while we prepare your cooking instructions.</p>
+        </div>
+      </div>
+    );
   }
 
-  const currentStepText = instructions[currentStep];
+  const currentStepText = instructions[currentStep] || '';
   const timeInMinutes = extractTimeFromStep(currentStepText);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      {/* Top Navigation Bar */}
       <div className="flex justify-between items-center mb-4 w-full max-w-md">
-        <h1 className="text-2xl font-bold">
-          {greeting}, {user?.name}! 👨‍🍳
-        </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto">
           <DarkModeToggle />
           <SavedRecipesButton />
-          <HomeButton lang={lang} />
+          <HomeButton />
           <LogoutButton />
         </div>
       </div>
-
       <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={handleToggleLanguage}
+            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm"
+          >
+            {lang === 'hi' ? 'Switch to English 🇬🇧' : 'Switch to Hindi 🇮🇳'}
+          </button>
+        </div>
         <h2 className="text-2xl font-bold mb-4">
           {lang === 'hi' ? 'चलिए पकाते हैं:' : 'Let\'s Cook:'} {recipe.title}
         </h2>
@@ -218,13 +266,18 @@ const CookingPage = () => {
           </div>
         )}
 
-        {currentStep === instructions.length - 1 && (
-          <div className="mt-4">
+        {/* Continue Later or Meal Ready */}
+        {currentStep === instructions.length - 1 ? (
+          <div className="mt-4 text-center text-2xl font-bold text-green-600">
+            {lang === 'hi' ? 'आपका भोजन तैयार है!' : 'Your meal is ready!'}
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-col gap-2">
             <button
-              onClick={handleSaveRecipe}
-              className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              onClick={handleContinueLater}
+              className="w-full bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
             >
-              💾 {lang === 'hi' ? 'रेसिपी सेव करें' : 'Save Recipe'}
+              ⏸️ Continue Later
             </button>
           </div>
         )}

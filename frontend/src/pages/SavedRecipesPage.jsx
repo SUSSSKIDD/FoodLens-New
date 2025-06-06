@@ -108,27 +108,51 @@ const SavedRecipesPage = () => {
     return nutritionLines;
   };
 
-  const handleStartCooking = (recipe, selectedLang) => {
-    navigate('/cook', { 
-      state: { 
+  const handleStartCooking = async (recipe, selectedLang) => {
+    try {
+      const token = localStorage.getItem('token');
+      // Save to cook history
+      await axios.post(
+        'http://localhost:5000/api/recipe/cooked',
+        {
+          title: recipe.title,
+          content: recipe.content,
+          language: selectedLang
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Set up localStorage progress for this recipe
+      const recipeKey = recipe.title.replace(/\s+/g, '_');
+      localStorage.setItem(
+        `cookingProgress_${recipeKey}`,
+        JSON.stringify({
+          recipe: { title: recipe.title, content: recipe.content },
+          currentStep: 0,
+          lang: selectedLang,
+          lastLeftAt: new Date().toISOString()
+        })
+      );
+      localStorage.setItem('cookingProgress', JSON.stringify({
         recipe: { title: recipe.title, content: recipe.content },
+        currentStep: 0,
         lang: selectedLang
-      }
-    });
+      }));
+      localStorage.setItem('cookingLang', selectedLang);
+      // Navigate to cooking page
+      navigate('/cook', {
+        state: {
+          recipe: { title: recipe.title, content: recipe.content },
+          lang: selectedLang
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      alert('Please Login to start cooking');
+    }
   };
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">
-          {greeting}, {user?.name || 'User'}! 🌱
-        </h1>
-        <div className="flex items-center gap-2">
-          <DarkModeToggle />
-          <HomeButton />
-          <LogoutButton />
-        </div>
-      </div>
       <h2 className="text-xl font-semibold mb-4">Saved Recipes Page</h2>
 
       {recipes.length === 0 ? (

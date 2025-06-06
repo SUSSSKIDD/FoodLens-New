@@ -146,6 +146,24 @@ const getCookedRecipes = async (req, res) => {
   }
 };
 
+// ✅ 7. Update CookedAt for a Cooked Recipe
+const updateCookedAt = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  try {
+    const updated = await CookedRecipe.findOneAndUpdate(
+      { _id: id, userId },
+      { cookedAt: new Date() },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: 'Cooked recipe not found or unauthorized' });
+    res.json({ message: 'Cooked time updated', cooked: updated });
+  } catch (err) {
+    console.error('❌ Error updating cookedAt:', err);
+    res.status(500).json({ message: 'Failed to update cooked time' });
+  }
+};
+
 module.exports = {
   generateRecipe,
   saveRecipe,
@@ -153,5 +171,6 @@ module.exports = {
   updateRecipe,
   deleteRecipe,
   saveCookedRecipe,
-  getCookedRecipes
+  getCookedRecipes,
+  updateCookedAt
 };

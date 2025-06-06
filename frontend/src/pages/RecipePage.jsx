@@ -67,15 +67,49 @@ const RecipePage = () => {
     }
   };
 
-  const handleStartCooking = (language) => {
-    const title = recipe.split('\n')[0];
-    const content = recipe.split('\n').slice(1).join('\n');
-    navigate('/cook', { 
-      state: { 
+  const handleStartCooking = async (language) => {
+    try {
+      const token = localStorage.getItem('token');
+      const title = recipe.split('\n')[0];
+      const content = recipe.split('\n').slice(1).join('\n');
+      // Save to cook history
+      await axios.post(
+        'http://localhost:5000/api/recipe/cooked',
+        { 
+          title, 
+          content,
+          language 
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Set up localStorage progress for this recipe
+      const recipeKey = title.replace(/\s+/g, '_');
+      localStorage.setItem(
+        `cookingProgress_${recipeKey}`,
+        JSON.stringify({
+          recipe: { title, content },
+          currentStep: 0,
+          lang: language,
+          lastLeftAt: new Date().toISOString()
+        })
+      );
+      localStorage.setItem('cookingProgress', JSON.stringify({
         recipe: { title, content },
+        currentStep: 0,
         lang: language
-      }
-    });
+      }));
+      localStorage.setItem('cookingLang', language);
+      // Navigate to cooking page
+      navigate('/cook', { 
+        state: { 
+          recipe: { title, content },
+          lang: language
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      alert('Please Login to start cooking');
+    }
   };
 
   if (detectedVeggies.length === 0) {
@@ -88,16 +122,6 @@ const RecipePage = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <div className="flex justify-between items-center mb-4 w-full max-w-md">
-        <h1 className="text-2xl font-bold">
-          {greeting}, {user?.name}! 🌱
-        </h1>
-        <div className="flex items-center gap-2">
-          <DarkModeToggle />
-          <SavedRecipesButton />
-          <LogoutButton />
-        </div>
-      </div>
       <h2 className="text-xl font-semibold mb-4">Recipe Page</h2>
       <PreferencesForm
         preferences={preferences}

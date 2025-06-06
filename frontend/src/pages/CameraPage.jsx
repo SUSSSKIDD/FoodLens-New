@@ -54,16 +54,6 @@ const CameraPage = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <div className="flex justify-between items-center mb-4 w-full max-w-md">
-        <h1 className="text-2xl font-bold">
-          {greeting}, {user.name}! 🌱
-        </h1>
-        <div className="flex items-center gap-2">
-          <DarkModeToggle />
-          <SavedRecipesButton />
-          <LogoutButton />
-        </div>
-      </div>
       <h2 className="text-xl font-semibold mb-4">🥕 Detect Vegetables</h2>    
       <ImageUploader onImageSelected={handleImageChange} />
 
