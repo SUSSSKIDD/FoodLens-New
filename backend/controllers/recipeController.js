@@ -23,21 +23,8 @@ Preferences:
 - Health Goal: ${preferences.healthGoal}
 - Spicy Level: ${['Little', 'Medium', 'High'][preferences.spicyLevel - 1]}
 
-First provide the recipe in English with the following sections:
-**English Translation**
-**Ingredients:**
-(List ingredients with bullet points)
-**Instructions:**
-(Numbered steps)
-
-Then provide the Hindi translation with the following sections:
-**Hindi Translation**
-**सामग्री:**
-(List ingredients in Hindi with bullet points)
-**निर्देश:**
-(Numbered steps in Hindi)
-
-Finally, include approximate nutritional value per serving.
+Return a clear, step-by-step recipe and divide recipe in  English Translation  as **English Translation** and Hindi translation  as **Hindi Translation**seperately.
+Include a section for ingredients, steps, and approximate nutritional value per serving  and also provide a youtube video for the recipe.
 `;
 
   try {
@@ -113,45 +100,4 @@ const deleteRecipe = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: 'Failed to delete recipe' });
   }
-};
-
-// ✅ 6. Save Cooked Recipe to CookedHistory
-const saveCookedRecipe = async (req, res) => {
-  const { title, content, language } = req.body;
-  const userId = req.user.id;
-
-  try {
-    const cooked = await CookedRecipe.create({
-      title,
-      content,
-      language,
-      userId
-    });
-
-    res.status(201).json({ message: '✅ Recipe saved to cook history', cooked });
-  } catch (err) {
-    console.error('❌ Error saving cooked recipe:', err);
-    res.status(500).json({ message: 'Failed to save cooked recipe' });
-  }
-};
-
-const getCookedRecipes = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const history = await CookedRecipe.find({ userId }).sort({ cookedAt: -1 });
-    res.json({ history });
-  } catch (err) {
-    console.error('❌ Error fetching cooked recipes:', err);
-    res.status(500).json({ message: 'Failed to fetch cook history' });
-  }
-};
-
-module.exports = {
-  generateRecipe,
-  saveRecipe,
-  getUserRecipes,
-  updateRecipe,
-  deleteRecipe,
-  saveCookedRecipe,
-  getCookedRecipes
 };
